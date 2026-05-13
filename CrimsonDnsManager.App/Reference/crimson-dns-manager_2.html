@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crimson DNS Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #05080f;
+      --bg2:       #080d18;
+      --surface:   rgba(11,18,36,0.90);
+      --surface2:  rgba(16,26,50,0.70);
+      --line:      rgba(120,200,255,0.08);
+      --line2:     rgba(120,200,255,0.18);
+      --text:      #ddeeff;
+      --muted:     #5a7a96;
+      --soft:      #9ab8cc;
+      --cyan:      #40c8f4;
+      --cyan2:     #78dcff;
+      --green:     #34d48a;
+      --amber:     #f4c040;
+      --red:       #f45060;
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'Sora', ui-sans-serif, sans-serif;
+      --r:         10px;
+      --r2:        16px;
+      --r3:        22px;
+      --sh:        0 20px 60px rgba(0,0,0,.55);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans); font-size: 13px; color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 50% 30% at 8% 0%, rgba(40,160,255,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 25% at 95% 2%, rgba(60,80,255,.06) 0%, transparent 50%);
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(120,200,255,.2); border-radius: 99px; }
+
+    /* ═══ APP SHELL ═══ */
+    .shell { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+    /* ═══ TOP BAR ═══ */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 52px;
+      background: rgba(5,8,15,.95);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .brand-hex {
+      width: 28px; height: 28px; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(64,200,244,.22), rgba(64,200,244,.05));
+      border: 1px solid rgba(64,200,244,.28);
+      display: grid; place-items: center; font-size: 13px; color: var(--cyan);
+      box-shadow: 0 0 16px rgba(64,200,244,.10);
+    }
+    .brand-label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: #fff; }
+    .brand-version { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .08em; margin-top: 1px; }
+    .topbar-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* ═══ BUTTONS ═══ */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--line2); border-radius: var(--r);
+      padding: 7px 13px; background: rgba(64,200,244,.07);
+      color: var(--text); font: inherit; font-size: 12px; font-weight: 500;
+      cursor: pointer; white-space: nowrap; min-height: 34px;
+      transition: all .14s ease;
+    }
+    .btn:hover { background: rgba(64,200,244,.13); border-color: rgba(64,200,244,.34); }
+    .btn.ghost { background: transparent; border-color: var(--line); color: var(--soft); }
+    .btn.ghost:hover { background: rgba(64,200,244,.06); color: var(--text); border-color: var(--line2); }
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(64,200,244,.26), rgba(64,200,244,.09));
+      border-color: rgba(64,200,244,.45); color: var(--cyan2);
+      box-shadow: 0 0 20px rgba(64,200,244,.09);
+    }
+    .btn.primary:hover { background: linear-gradient(135deg, rgba(64,200,244,.34), rgba(64,200,244,.16)); }
+    .btn.danger { border-color: rgba(244,80,96,.28); background: rgba(244,80,96,.08); color: var(--red); }
+    .btn.danger:hover { background: rgba(244,80,96,.14); }
+    .btn.warn { border-color: rgba(244,192,64,.28); background: rgba(244,192,64,.08); color: var(--amber); }
+    .btn i { font-style: normal; font-size: 14px; line-height: 1; }
+
+    /* ═══ BADGES ═══ */
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 9.5px; font-weight: 600; padding: 2px 7px; border-radius: 99px; letter-spacing: .04em; white-space: nowrap; }
+    .badge::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .badge.ok { color: var(--green); border: 1px solid rgba(52,212,138,.28); background: rgba(52,212,138,.08); }
+    .badge.warn { color: var(--amber); border: 1px solid rgba(244,192,64,.28); background: rgba(244,192,64,.08); }
+    .badge.err { color: var(--red); border: 1px solid rgba(244,80,96,.28); background: rgba(244,80,96,.08); }
+    .badge.neu { color: var(--cyan); border: 1px solid rgba(64,200,244,.28); background: rgba(64,200,244,.08); }
+    .badge.gray { color: var(--muted); border: 1px solid rgba(90,122,150,.24); background: rgba(90,122,150,.08); }
+
+    /* ═══ SIDEBAR ═══ */
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(5,9,18,.98) 0%, rgba(7,12,24,.94) 100%);
+      display: flex; flex-direction: column;
+      overflow-y: auto; height: calc(100vh - 52px);
+      position: sticky; top: 52px;
+    }
+    .sidebar-section { padding: 18px 16px 12px; }
+    .sidebar-section + .sidebar-section { border-top: 1px solid var(--line); }
+    .sidebar-label { font-family: var(--mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: #3a5268; margin-bottom: 10px; }
+
+    /* ─ Cloudflare API form ─ */
+    .cf-form { display: grid; gap: 7px; }
+    .field { display: grid; gap: 4px; }
+    .field-label { font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: .04em; }
+    .field-input {
+      width: 100%; height: 34px; border-radius: var(--r);
+      border: 1px solid var(--line); background: rgba(2,6,16,.70);
+      color: var(--text); padding: 0 10px; outline: none;
+      font: var(--mono); font-size: 11.5px;
+      transition: border-color .14s;
+    }
+    .field-input:focus { border-color: rgba(64,200,244,.38); }
+    .field-input.masked { letter-spacing: .18em; color: var(--muted); }
+    .checkbox-row { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--soft); cursor: pointer; }
+    .checkbox-row input { accent-color: var(--cyan); width: 14px; height: 14px; cursor: pointer; }
+
+    /* ─ Zone list ─ */
+    .zone-list { display: grid; gap: 4px; }
+    .zone-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 10px; border: 1px solid transparent; border-radius: var(--r);
+      cursor: pointer; font-family: var(--mono); font-size: 11.5px; color: var(--soft);
+      transition: all .13s ease; background: transparent;
+    }
+    .zone-item:hover { background: rgba(64,200,244,.06); color: var(--text); border-color: var(--line); }
+    .zone-item.active { background: rgba(64,200,244,.10); color: #fff; border-color: rgba(64,200,244,.24); }
+    .zone-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+
+    /* ─ Schnellaktionen ─ */
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .quick-btn {
+      border: 1px solid var(--line); border-radius: var(--r);
+      padding: 9px 8px; background: rgba(255,255,255,.02);
+      color: var(--soft); font: inherit; font-size: 11px; font-weight: 500;
+      cursor: pointer; text-align: center; transition: all .13s ease;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .quick-btn:hover { background: rgba(64,200,244,.07); color: var(--text); border-color: var(--line2); }
+    .quick-btn.full { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 6px; }
+    .qicon { font-size: 15px; line-height: 1; }
+
+    /* ─ App update ─ */
+    .update-card { border: 1px solid var(--line); border-radius: var(--r2); padding: 12px 13px; background: rgba(255,255,255,.02); }
+    .update-status { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin: 6px 0 10px; }
+
+    /* ─ IP quick ─ */
+    .ip-pair { display: grid; gap: 6px; }
+    .ip-row { display: flex; gap: 6px; align-items: center; }
+    .ip-label { font-size: 10px; color: var(--muted); white-space: nowrap; min-width: 44px; }
+    .ip-val { font-family: var(--mono); font-size: 11.5px; flex: 1; background: rgba(2,6,16,.70); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; color: var(--cyan2); }
+
+    /* ═══ MAIN ═══ */
+    .main-content { display: flex; flex-direction: column; min-height: calc(100vh - 52px); overflow: hidden; }
+
+    /* ─ Content header ─ */
+    .content-header {
+      padding: 22px 26px 0;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+    }
+    .page-kicker { font-family: var(--mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); margin-bottom: 5px; }
+    .page-title { font-size: clamp(20px, 2.5vw, 30px); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+    .page-sub { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.5; }
+    .header-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    /* ─ Stat row ─ */
+    .stat-row { display: flex; gap: 10px; padding: 16px 26px 0; flex-wrap: wrap; }
+    .stat-pill {
+      display: flex; align-items: center; gap: 8px;
+      border: 1px solid var(--line); border-radius: 99px;
+      padding: 6px 13px; background: rgba(255,255,255,.025); font-size: 11.5px;
+    }
+    .stat-pill strong { font-family: var(--mono); color: var(--text); }
+    .stat-pill span { color: var(--muted); }
+
+    /* ─ Zone/filter bar ─ */
+    .filter-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 14px 26px 0; flex-wrap: wrap;
+    }
+    .filter-left { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .search-wrap { position: relative; }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+    .search-input {
+      height: 34px; border-radius: var(--r); border: 1px solid var(--line);
+      background: rgba(2,6,16,.65); color: var(--text);
+      padding: 0 10px 0 32px; font: inherit; font-size: 12.5px; outline: none; width: 220px;
+      transition: border-color .14s;
+    }
+    .search-input:focus { border-color: rgba(64,200,244,.36); }
+    .filter-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      border: 1px solid var(--line); border-radius: 99px;
+      padding: 5px 11px; background: transparent;
+      color: var(--muted); font: inherit; font-size: 11.5px;
+      cursor: pointer; transition: all .13s;
+    }
+    .filter-chip:hover, .filter-chip.active { background: rgba(64,200,244,.09); border-color: var(--line2); color: var(--text); }
+    .filter-chip.active { color: var(--cyan); }
+
+    /* ─ DNS Table ─ */
+    .table-wrap {
+      flex: 1; overflow: auto; padding: 14px 26px 0;
+    }
+    .dns-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .dns-table thead tr th {
+      font-family: var(--mono); font-size: 9.5px; letter-spacing: .10em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 0 14px 9px; text-align: left; white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+    }
+    .dns-table thead tr th:first-child { padding-left: 10px; }
+    .dns-table thead tr th.th-check { width: 36px; padding-left: 10px; }
+    .dns-table tbody tr { transition: background .12s; }
+    .dns-table tbody tr:hover td { background: rgba(64,200,244,.05); }
+    .dns-table tbody tr:hover td:first-child { border-left-color: rgba(64,200,244,.5); }
+    .dns-table tbody tr.selected td { background: rgba(244,80,96,.06); }
+    .dns-table tbody tr.selected td.td-check { border-left-color: rgba(244,80,96,.6); }
+    .dns-table tbody tr.selected:hover td { background: rgba(244,80,96,.09); }
+    .dns-table tbody td {
+      padding: 9px 14px; border-bottom: 1px solid rgba(120,200,255,.05);
+      color: var(--soft); vertical-align: middle;
+      border-left: 2px solid transparent;
+      transition: all .12s;
+    }
+    .dns-table tbody td.td-check { padding: 9px 6px 9px 10px; width: 36px; }
+    .dns-table tbody td.name { font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 500; }
+    .dns-table tbody td.type { font-family: var(--mono); font-size: 11px; }
+    .dns-table tbody td.content { font-family: var(--mono); font-size: 11px; max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--soft); }
+    .dns-table tbody td.ttl, .dns-table tbody td.prio { font-family: var(--mono); font-size: 11px; text-align: center; }
+    .dns-table tbody td.proxy { text-align: center; }
+    .dns-table tbody td.actions { text-align: right; white-space: nowrap; }
+    /* Type badges */
+    .type-A    { color: #40c8f4; }
+    .type-AAAA { color: #78dcff; }
+    .type-CNAME{ color: var(--amber); }
+    .type-MX   { color: #a78bfa; }
+    .type-TXT  { color: var(--green); }
+    .type-SRV  { color: #fb923c; }
+    /* Row action buttons */
+    .row-btn { border: 1px solid transparent; border-radius: 7px; padding: 4px 9px; background: transparent; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; transition: all .12s; }
+    .row-btn:hover { background: rgba(64,200,244,.09); border-color: var(--line2); color: var(--text); }
+    .row-btn.del:hover { background: rgba(244,80,96,.10); border-color: rgba(244,80,96,.24); color: var(--red); }
+    .proxy-icon { font-size: 14px; }
+    .proxy-on { color: var(--amber); }
+    .proxy-off { color: var(--muted); opacity: .4; }
+
+    /* ─ Livefeed ─ */
+    .livefeed {
+      margin: 14px 26px 0; border: 1px solid var(--line); border-radius: var(--r2);
+      background: rgba(2,6,16,.75); overflow: hidden;
+    }
+    .livefeed-hd {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 14px; border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+    }
+    .livefeed-hd-left { display: flex; align-items: center; gap: 8px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    .livefeed-title { font-family: var(--mono); font-size: 10px; color: var(--soft); letter-spacing: .12em; text-transform: uppercase; }
+    .livefeed-body { padding: 10px 14px; height: 96px; overflow-y: auto; }
+    .log-line { font-family: var(--mono); font-size: 10.5px; color: var(--muted); line-height: 1.7; }
+    .log-line .ts { color: #334455; }
+    .log-line .ok { color: var(--green); }
+    .log-line .act { color: var(--cyan); }
+    .log-line .warn { color: var(--amber); }
+    .log-line .err { color: var(--red); }
+
+    /* ─ Dev Notice ─ */
+    .dev-notice {
+      margin: 12px 26px 26px;
+      border: 1px solid rgba(244,192,64,.20);
+      background: rgba(244,192,64,.04);
+      border-radius: var(--r2); overflow: hidden;
+    }
+    .dev-notice-hd {
+      display: flex; align-items: center; gap: 9px;
+      padding: 10px 16px; border-bottom: 1px solid rgba(244,192,64,.14);
+      background: rgba(244,192,64,.06); cursor: pointer;
+    }
+    .dev-notice-hd span { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); }
+    .dev-notice-hd .toggle-icon { margin-left: auto; color: var(--amber); font-style: normal; transition: transform .2s; }
+    .dev-notice-body { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: rgba(244,192,64,.08); }
+    .dev-notice-body.hidden { display: none; }
+    .dn-card { background: rgba(5,8,15,.94); padding: 14px 16px; }
+    .dn-tag { font-family: var(--mono); font-size: 8.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--amber); margin-bottom: 5px; }
+    .dn-title { font-size: 12px; font-weight: 600; margin-bottom: 7px; }
+    .dn-list { list-style: none; display: grid; gap: 5px; }
+    .dn-list li { display: flex; gap: 6px; font-size: 11.5px; color: var(--soft); line-height: 1.45; }
+    .dn-list li::before { content: "–"; color: var(--amber); font-family: var(--mono); flex-shrink: 0; }
+    .dn-list li code { font-family: var(--mono); font-size: 10.5px; color: var(--cyan2); background: rgba(64,200,244,.09); border-radius: 4px; padding: 0 4px; }
+    .dn-card.full { grid-column: 1 / -1; }
+    .dn-code { font-family: var(--mono); font-size: 10.5px; color: var(--cyan2); background: rgba(0,0,0,.4); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 6px; line-height: 1.7; white-space: pre-wrap; }
+    .dn-code .c { color: #3a5268; }
+    .dn-code .k { color: var(--amber); }
+    .dn-code .s { color: var(--green); }
+
+    /* ═══ MODAL ═══ */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(10px); z-index: 300; place-items: center; padding: 16px; }
+    .modal-backdrop.show { display: grid; animation: fadeIn .18s ease; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .modal { width: min(520px,100%); border: 1px solid var(--line2); border-radius: 22px; background: linear-gradient(160deg, rgba(10,20,44,.98) 0%, rgba(5,9,20,.98) 100%); box-shadow: var(--sh); padding: 22px; animation: slideUp .22s ease; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+    .modal-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--cyan); margin-bottom: 5px; }
+    .modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .modal-grid .span2 { grid-column: 1 / -1; }
+    .modal-actions { display: flex; gap: 7px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+
+    /* ═══ TOAST ═══ */
+    .toast-stack { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 6px; z-index: 400; max-width: 310px; pointer-events: none; }
+    .toast { border: 1px solid var(--line2); border-radius: 14px; background: rgba(7,12,26,.97); padding: 10px 13px; box-shadow: var(--sh); backdrop-filter: blur(16px); animation: toastIn .2s ease; }
+    .toast strong { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--cyan); }
+    .toast p { color: var(--soft); font-size: 11.5px; margin-top: 2px; }
+    .toast.green { border-color: rgba(52,212,138,.30); background: rgba(4,18,12,.97); }
+    .toast.green strong { color: var(--green); }
+    .toast.green p { color: #7fe8bc; }
+    .toast.red { border-color: rgba(244,80,96,.28); background: rgba(18,4,6,.97); }
+    .toast.red strong { color: var(--red); }
+    .toast.red p { color: #f49098; }
+    @keyframes toastIn { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:none; } }
+
+    /* ═══ SELECTION BAR ═══ */
+    .selection-bar {
+      display: none; align-items: center; gap: 10px;
+      margin: 10px 26px 0; padding: 9px 14px;
+      border: 1px solid rgba(244,80,96,.28); border-radius: var(--r2);
+      background: rgba(244,80,96,.07); animation: fadeIn .15s ease;
+    }
+    .selection-bar.visible { display: flex; }
+    .sel-count { font-family: var(--mono); font-size: 11px; color: var(--red); font-weight: 600; }
+    .sel-label { font-size: 12px; color: var(--soft); flex: 1; }
+    .sel-clear { border: 1px solid var(--line); border-radius: 7px; padding: 4px 10px; background: transparent; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; transition: all .12s; }
+    .sel-clear:hover { background: rgba(255,255,255,.06); color: var(--text); }
+
+    /* ═══ CHECKBOX ═══ */
+    .row-checkbox { width: 15px; height: 15px; accent-color: var(--red); cursor: pointer; }
+    .th-checkbox { width: 15px; height: 15px; accent-color: var(--cyan); cursor: pointer; }
+
+    /* ═══ DELETE MODAL ═══ */
+    .del-modal { width: min(500px,100%); border: 1px solid rgba(244,80,96,.30); border-radius: 22px; background: linear-gradient(160deg, rgba(20,6,10,.98) 0%, rgba(8,4,8,.98) 100%); box-shadow: var(--sh); padding: 22px; animation: slideUp .22s ease; }
+    .del-modal-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--red); margin-bottom: 5px; }
+    .del-modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .del-modal p { color: var(--muted); font-size: 12px; line-height: 1.55; margin-bottom: 12px; }
+    .del-list { display: grid; gap: 5px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; }
+    .del-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid rgba(244,80,96,.15); border-radius: var(--r); background: rgba(244,80,96,.05); font-size: 12px; }
+    .del-item .di-name { font-family: var(--mono); font-weight: 600; color: var(--text); flex: 1; }
+    .del-item .di-type { font-family: var(--mono); font-size: 10px; }
+    .del-item .di-content { font-family: var(--mono); font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+    .del-warn { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid rgba(244,192,64,.20); border-radius: var(--r); background: rgba(244,192,64,.05); font-size: 11.5px; color: var(--amber); margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ═══ TOP BAR ═══ -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-hex">⬡</div>
+      <div>
+        <div class="brand-label">CRIMSON</div>
+        <div class="brand-version">DNS MANAGER 0.3.2</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn ghost" onclick="showToast('Backup wird erstellt…', '')"><i>💾</i> Backup erstellen</button>
+      <button class="btn danger" id="btnDeleteSelected" onclick="openDeleteModal()" style="display:none"><i>✕</i> Auswahl löschen <span id="deleteCount" style="font-family:var(--mono);font-size:10px;background:rgba(244,80,96,.25);padding:1px 6px;border-radius:99px;margin-left:2px"></span></button>
+      <button class="btn warn" onclick="openModal()"><i>＋</i> Record hinzufügen</button>
+      <button class="btn primary" onclick="saveDns()"><i>↑</i> DNS speichern</button>
+    </div>
+  </header>
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+
+    <!-- Cloudflare API -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Cloudflare API</div>
+      <div class="cf-form">
+        <div class="field">
+          <div class="field-label">API Token</div>
+          <input class="field-input masked" type="password" value="cf_token_placeholder_demo" />
+        </div>
+        <div class="field">
+          <div class="field-label">Domain</div>
+          <input class="field-input" type="text" value="cr1ms0n.xyz" />
+        </div>
+        <div class="field">
+          <div class="field-label">Zone ID</div>
+          <input class="field-input" type="text" value="16ab7b7f1a34bd8a0328fd3e9b77afb7" style="font-size:10px" />
+        </div>
+        <div class="field">
+          <div class="field-label">Account ID <span style="color:var(--muted);font-size:10px">(optional)</span></div>
+          <input class="field-input" type="text" value="562859a426591c324ade545a4aa7ecd3" style="font-size:10px" />
+        </div>
+        <label class="checkbox-row"><input type="checkbox" checked /> Backup vor DNS speichern</label>
+        <label class="checkbox-row"><input type="checkbox" checked /> Web Records standardmäßig proxied</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px">
+          <button class="btn ghost" style="font-size:11px;justify-content:center" onclick="showToast('Einstellungen gespeichert')">Speichern</button>
+          <button class="btn" style="font-size:11px;justify-content:center" onclick="showToast('Verbindungstest läuft…')">Verbindung testen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zones -->
+    <div class="sidebar-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sidebar-label" style="margin-bottom:0">Cloudflare Zonen</div>
+        <button class="btn ghost" style="font-size:10px;padding:4px 9px;min-height:26px" onclick="showToast('Zonen werden geladen…')">↺ Laden</button>
+      </div>
+      <div class="zone-list">
+        <div class="zone-item active">
+          <span>cr1ms0n.xyz</span>
+          <div class="zone-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schnellaktionen -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Zone Schnellzugriff</div>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="showToast('DNS Records laden…')"><span class="qicon">📋</span>DNS Records</button>
+        <button class="quick-btn" onclick="showToast('Zone ID kopiert')"><span class="qicon">⎘</span>Zone ID kopieren</button>
+        <button class="quick-btn" onclick="showToast('Öffne Cloudflare Dashboard…')"><span class="qicon">↗</span>CF Dashboard</button>
+        <button class="quick-btn" onclick="showToast('Öffne Backup Ordner…')"><span class="qicon">📁</span>Backup Ordner</button>
+      </div>
+    </div>
+
+    <!-- App Update -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">App Update</div>
+      <div class="update-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:500">Paket Update</span>
+          <span class="badge gray">kein Update</span>
+        </div>
+        <div class="update-status">kein Update Paket gewählt.</div>
+        <div style="display:grid;gap:5px">
+          <button class="btn ghost" style="font-size:11px;justify-content:center" onclick="showToast('Paket wird gewählt…')">Paket wählen</button>
+          <button class="btn ghost" style="font-size:11px;justify-content:center" onclick="showToast('Paket wird geprüft…')">Prüfen</button>
+          <button class="btn primary" style="font-size:11px;justify-content:center" onclick="showToast('Installation gestartet…')">⟳ Installieren &amp; neu starten</button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main-content">
+
+    <!-- Header -->
+    <div class="content-header">
+      <div>
+        <div class="page-kicker">Cloudflare DNS · cr1ms0n.xyz</div>
+        <div class="page-title">DNS Records</div>
+        <div class="page-sub">Cloudflare DNS Records mit lokalen Backups, sicherer Vorschau und integriertem Updater.</div>
+      </div>
+      <div class="header-actions">
+        <span class="badge ok">25 Records geladen</span>
+        <span class="badge neu">Zone aktiv</span>
+      </div>
+    </div>
+
+    <!-- Stat row -->
+    <div class="stat-row">
+      <div class="stat-pill"><span class="zone-dot"></span><strong>cr1ms0n.xyz</strong><span>aktive Zone</span></div>
+      <div class="stat-pill"><strong>14</strong><span>A-Records</span></div>
+      <div class="stat-pill"><strong>2</strong><span>AAAA</span></div>
+      <div class="stat-pill"><strong>3</strong><span>TXT</span></div>
+      <div class="stat-pill"><strong>1</strong><span>MX</span></div>
+      <div class="stat-pill"><strong>3</strong><span>SRV</span></div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-left">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input class="search-input" type="text" placeholder="Name, Typ oder Content…" oninput="filterTable(this.value)" />
+        </div>
+        <button class="filter-chip active" onclick="setFilter('all',this)">Alle</button>
+        <button class="filter-chip" onclick="setFilter('A',this)">A</button>
+        <button class="filter-chip" onclick="setFilter('AAAA',this)">AAAA</button>
+        <button class="filter-chip" onclick="setFilter('CNAME',this)">CNAME</button>
+        <button class="filter-chip" onclick="setFilter('MX',this)">MX</button>
+        <button class="filter-chip" onclick="setFilter('TXT',this)">TXT</button>
+        <button class="filter-chip" onclick="setFilter('SRV',this)">SRV</button>
+      </div>
+    </div>
+
+    <!-- Selection bar -->
+    <div class="selection-bar" id="selectionBar">
+      <span class="sel-count" id="selCount">0</span>
+      <span class="sel-label">Records zum Löschen markiert</span>
+      <button class="sel-clear" onclick="clearSelection()">Auswahl aufheben</button>
+      <button class="btn danger" style="font-size:11px;padding:5px 12px;min-height:0" onclick="openDeleteModal()">✕ Löschen</button>
+    </div>
+
+    <!-- DNS Table -->
+    <div class="table-wrap">
+      <table class="dns-table" id="dnsTable">
+        <thead>
+          <tr>
+            <th class="th-check"><input type="checkbox" class="th-checkbox" id="checkAll" onchange="toggleAll(this)" title="Alle markieren" /></th>
+            <th>Name</th>
+            <th>Typ</th>
+            <th>Content</th>
+            <th style="text-align:center">TTL</th>
+            <th style="text-align:center">Prio</th>
+            <th style="text-align:center">Proxy</th>
+            <th style="text-align:right">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="dnsBody">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Livefeed -->
+    <div class="livefeed">
+      <div class="livefeed-hd">
+        <div class="livefeed-hd-left">
+          <div class="live-dot"></div>
+          <span class="livefeed-title">Livefeed</span>
+        </div>
+        <button class="btn ghost" style="font-size:10px;padding:3px 8px;min-height:0" onclick="document.querySelector('.livefeed-body').innerHTML=''">Leeren</button>
+      </div>
+      <div class="livefeed-body" id="livefeedBody">
+        <div class="log-line"><span class="ts">[2026-05-12 23:49:07.887]</span> <span class="ok">OK:</span> DNS Records geladen für cr1ms0n.xyz. Records: 25</div>
+        <div class="log-line"><span class="ts">[2026-05-12 23:49:07.493]</span> <span class="act">ACT:</span> Cloudflare API: GET /zones/16ab7b…/dns_records?per_page=100&amp;page=1</div>
+        <div class="log-line"><span class="ts">[2026-05-12 23:49:03.476]</span> <span class="ok">OK:</span> Einstellungen gespeichert.</div>
+        <div class="log-line"><span class="ts">[2026-05-12 23:49:02.413]</span> <span class="ok">OK:</span> Zonen geladen: 1</div>
+        <div class="log-line"><span class="ts">[2026-05-12 23:49:02.409]</span> <span class="ok">OK:</span> Einstellungen gespeichert.</div>
+        <div class="log-line"><span class="ts">[2026-05-12 23:49:01.934]</span> <span class="act">ACT:</span> Cloudflare API: GET /zones?name=cr1ms0n.xyz&amp;per_page=50</div>
+      </div>
+    </div>
+
+    <!-- DEV NOTICE -->
+    <div class="dev-notice">
+      <div class="dev-notice-hd" onclick="toggleNotice()">
+        <span style="font-size:14px">⚠</span>
+        <span>Developer Notice · Implementierungshinweise für DNS Manager</span>
+        <i class="toggle-icon" id="noticeIcon">▾</i>
+      </div>
+      <div class="dev-notice-body" id="noticeBody">
+
+        <div class="dn-card">
+          <div class="dn-tag">Daten &amp; API</div>
+          <div class="dn-title">Cloudflare REST API</div>
+          <ul class="dn-list">
+            <li>Basis-URL: <code>https://api.cloudflare.com/client/v4</code></li>
+            <li>Auth-Header: <code>Authorization: Bearer {token}</code></li>
+            <li>DNS Records laden: <code>GET /zones/{id}/dns_records?per_page=100</code></li>
+            <li>Record erstellen: <code>POST /zones/{id}/dns_records</code></li>
+            <li>Record löschen: <code>DELETE /zones/{id}/dns_records/{record_id}</code></li>
+            <li>Zone-ID per Name: <code>GET /zones?name=cr1ms0n.xyz</code></li>
+            <li>API Token nie im Frontend plain speichern — httpOnly Cookie oder Backend-Proxy bevorzugen.</li>
+          </ul>
+        </div>
+
+        <div class="dn-card">
+          <div class="dn-tag">Tabelle &amp; Filter</div>
+          <div class="dn-title">DNS Records Tabelle</div>
+          <ul class="dn-list">
+            <li>Tabelle ist clientseitig filterbar — Daten einmal laden, dann filtern ohne API-Call.</li>
+            <li>Suchfeld filtert über Name, Typ und Content gleichzeitig (case-insensitive).</li>
+            <li>Typ-Filter-Chips exklusiv (nur ein Typ gleichzeitig aktiv, oder "Alle").</li>
+            <li>Content-Zelle: langer Text per <code>text-overflow: ellipsis</code>, Tooltip bei Hover mit Full-Content.</li>
+            <li>Proxy-Toggle: Cloudflare <code>proxied: true/false</code> — direkt per PATCH Record aktualisieren.</li>
+            <li><strong>Selektion:</strong> Checkbox pro Zeile + Checkbox im Header für "Alle markieren / alle abwählen".</li>
+            <li>Selektierte Zeilen bekommen roten Hintergrund-Tint + linken Border als visuellen Marker.</li>
+            <li>Selection-Bar erscheint animiert sobald ≥1 Record markiert ist, zeigt Anzahl + "Auswahl aufheben".</li>
+            <li>"Auswahl löschen"-Button in Topbar erscheint nur wenn ≥1 markiert (dynamisch per JS, <code>display:none/flex</code>).</li>
+            <li>Delete öffnet Modal mit Liste aller markierten Records — kein <code>window.confirm()</code>.</li>
+            <li>Record-Typen mit eigener Farbe: A=Cyan, AAAA=Hellcyan, CNAME=Amber, MX=Lila, TXT=Grün, SRV=Orange.</li>
+          </ul>
+        </div>
+
+        <div class="dn-card">
+          <div class="dn-tag">Backup &amp; Speichern</div>
+          <div class="dn-title">Backup-Logik &amp; Toast-Farben</div>
+          <ul class="dn-list">
+            <li>Backup vor Speichern: aktuellen Zustand als JSON dumpen, lokal ablegen.</li>
+            <li>Backup-Format: <code>cr1ms0n.xyz_backup_YYYYMMDD_HHMMSS.json</code></li>
+            <li>Backup enthält: alle Records mit ID, type, name, content, ttl, proxied.</li>
+            <li>Backup-Ordner öffnen: Electron <code>shell.openPath()</code> oder Tauri <code>fs</code> API.</li>
+            <li>"DNS speichern" zeigt <strong>grünen Toast</strong> bei Erfolg — CSS-Klasse <code>.toast.green</code>.</li>
+            <li>Fehler beim Speichern → roter Toast (<code>.toast.red</code>). Standard-Info bleibt cyan.</li>
+            <li>"DNS speichern" Button: nur aktiv wenn Änderungen vorliegen (dirty state tracken).</li>
+            <li>Bulk-Änderungen batchen — nicht jede Änderung sofort zur API senden.</li>
+          </ul>
+        </div>
+
+        <div class="dn-card">
+          <div class="dn-tag">UI-Zustände</div>
+          <div class="dn-title">Loading / Error / Empty</div>
+          <ul class="dn-list">
+            <li>Tabelle zeigt Skeleton-Rows beim Laden (gleiche Höhe, kein Layout-Shift).</li>
+            <li>Leerer State: Illustration + CTA "DNS Records laden" wenn noch keine Records geladen.</li>
+            <li>Error State: Toast + Retry-Button wenn API-Call scheitert.</li>
+            <li>Livefeed zeigt alle API-Calls mit Timestamp, HTTP-Methode und Status.</li>
+            <li>Livefeed auto-scrollt nach unten bei neuem Eintrag.</li>
+            <li>Toast-Queue: max. 3 gleichzeitig, älteste zuerst entfernen, Timeout 3.5s.</li>
+          </ul>
+        </div>
+
+        <div class="dn-card">
+          <div class="dn-tag">App Shell</div>
+          <div class="dn-title">Electron / Tauri Hinweise</div>
+          <ul class="dn-list">
+            <li>Desktop-App — kein Browser-Target nötig, aber CORS via Backend-Proxy trotzdem empfohlen.</li>
+            <li>API Token im Electron-Store (<code>electron-store</code>) oder Keychain verschlüsselt ablegen.</li>
+            <li>Update-Flow: Paket wählen → prüfen (Hash/Signatur) → installieren → neu starten.</li>
+            <li>Schnellaktionen "next A Record" / "acp A Record" befüllen das Formular vor — nicht direkt pushen.</li>
+            <li>Topbar: Sticky, immer sichtbar. Actions-Buttons oben rechts — höchste Interaktionsfrequenz.</li>
+            <li>Sidebar: Scrollbar sichtbar halten; Sections collapsible wenn zu lang.</li>
+          </ul>
+        </div>
+
+        <div class="dn-card full">
+          <div class="dn-tag">Record-Formular Pflichtfelder nach Typ</div>
+          <div class="dn-title">Record hinzufügen / bearbeiten — Validierungsregeln</div>
+          <div class="dn-code"><span class="c">// Pflichtfelder je Record-Typ</span>
+<span class="k">const</span> required = {
+  <span class="s">'A'</span>:     [<span class="s">'name'</span>, <span class="s">'content'</span>],          <span class="c">// content = IPv4</span>
+  <span class="s">'AAAA'</span>:  [<span class="s">'name'</span>, <span class="s">'content'</span>],          <span class="c">// content = IPv6</span>
+  <span class="s">'CNAME'</span>: [<span class="s">'name'</span>, <span class="s">'content'</span>],          <span class="c">// content = Zieldomain</span>
+  <span class="s">'MX'</span>:    [<span class="s">'name'</span>, <span class="s">'content'</span>, <span class="s">'priority'</span>], <span class="c">// priority: 0–65535</span>
+  <span class="s">'TXT'</span>:   [<span class="s">'name'</span>, <span class="s">'content'</span>],          <span class="c">// content = beliebiger String</span>
+  <span class="s">'SRV'</span>:   [<span class="s">'name'</span>, <span class="s">'content'</span>, <span class="s">'priority'</span>, <span class="s">'data.weight'</span>, <span class="s">'data.port'</span>],
+};
+<span class="c">// TTL: 1 = Auto (Cloudflare), oder Sekunden (min 60)</span>
+<span class="c">// proxied: nur für A, AAAA, CNAME möglich — für MX/TXT/SRV immer false</span>
+<span class="c">// name '@' = Zone-Apex, wird von CF zu cr1ms0n.xyz expandiert</span></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /shell -->
+
+<!-- MODAL: Record hinzufügen -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-tag">DNS Record</div>
+    <h2>Record hinzufügen</h2>
+    <div class="modal-grid">
+      <div class="field span2">
+        <div class="field-label">Typ</div>
+        <select class="field-input" onchange="updateTypeHint(this)">
+          <option>A</option><option>AAAA</option><option>CNAME</option>
+          <option>MX</option><option>TXT</option><option>SRV</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-label">Name</div>
+        <input class="field-input" placeholder="@ oder subdomain" />
+      </div>
+      <div class="field">
+        <div class="field-label">Content</div>
+        <input class="field-input" placeholder="IPv4 Adresse" id="contentHint" />
+      </div>
+      <div class="field">
+        <div class="field-label">TTL</div>
+        <input class="field-input" placeholder="1 (Auto)" />
+      </div>
+      <div class="field">
+        <div class="field-label">Priority</div>
+        <input class="field-input" placeholder="— (optional)" />
+      </div>
+      <div class="field span2">
+        <label class="checkbox-row"><input type="checkbox" checked /> Proxied (Cloudflare CDN)</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeAddModal()">Abbrechen</button>
+      <button class="btn primary" onclick="showToast('Record erstellt ✓',''); closeAddModal()">Record erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Records löschen -->
+<div class="modal-backdrop" id="deleteModalBackdrop" onclick="if(event.target===this)closeDeleteModal()">
+  <div class="del-modal" onclick="event.stopPropagation()">
+    <div class="del-modal-tag">⚠ Löschen bestätigen</div>
+    <h2>Records entfernen</h2>
+    <p>Die folgenden Records werden dauerhaft aus Cloudflare gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    <div class="del-list" id="delList"></div>
+    <div class="del-warn">⚠ Cloudflare API: Pro Record ein <code style="font-family:var(--mono);font-size:10px;background:rgba(244,192,64,.12);padding:0 4px;border-radius:4px">DELETE</code>-Request. Änderungen sind sofort live.</div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeDeleteModal()">Abbrechen</button>
+      <button class="btn danger" onclick="confirmDelete()">✕ Jetzt löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+  /* ── DNS DATA ── */
+  const DNS_DATA = [
+    { name:'acp',               type:'A',     content:'5.182.204.20',                       ttl:1, prio:'',  proxy:true  },
+    { name:'cloud',             type:'A',     content:'91.200.101.11',                      ttl:1, prio:'',  proxy:true  },
+    { name:'@',                 type:'A',     content:'91.200.103.154',                     ttl:1, prio:'',  proxy:true  },
+    { name:'diabetes',          type:'A',     content:'5.182.204.20',                       ttl:1, prio:'',  proxy:true  },
+    { name:'ipv4',              type:'A',     content:'91.200.103.154',                     ttl:1, prio:'',  proxy:true  },
+    { name:'mail',              type:'A',     content:'91.200.103.154',                     ttl:1, prio:'',  proxy:false },
+    { name:'minio',             type:'A',     content:'91.200.101.11',                      ttl:1, prio:'',  proxy:true  },
+    { name:'next',              type:'A',     content:'185.234.72.182',                     ttl:1, prio:'',  proxy:true  },
+    { name:'ns1',               type:'A',     content:'91.200.103.154',                     ttl:1, prio:'',  proxy:false },
+    { name:'ns2',               type:'A',     content:'91.200.103.154',                     ttl:1, prio:'',  proxy:false },
+    { name:'webmail',           type:'A',     content:'91.200.103.154',                     ttl:1, prio:'',  proxy:true  },
+    { name:'acp',               type:'AAAA',  content:'2a01:367:c204:17:549',               ttl:1, prio:'',  proxy:true  },
+    { name:'diabetes',          type:'AAAA',  content:'2a01:367:c204:17:549',               ttl:1, prio:'',  proxy:true  },
+    { name:'ftp',               type:'CNAME', content:'cr1ms0n.xyz',                        ttl:1, prio:'',  proxy:true  },
+    { name:'www',               type:'CNAME', content:'cr1ms0n.xyz',                        ttl:1, prio:'',  proxy:true  },
+    { name:'@',                 type:'MX',    content:'mail.cr1ms0n.xyz',                   ttl:1, prio:'10', proxy:false },
+    { name:'_imaps._tcp',       type:'SRV',   content:'0 993 cr1ms0n.xyz',                  ttl:1, prio:'0',  proxy:false },
+    { name:'_pop3s._tcp',       type:'SRV',   content:'0 995 cr1ms0n.xyz',                  ttl:1, prio:'0',  proxy:false },
+    { name:'_smtps._tcp',       type:'SRV',   content:'0 465 cr1ms0n.xyz',                  ttl:1, prio:'0',  proxy:false },
+    { name:'acme-challenge.cloud', type:'TXT',content:'"eWWIMaD8kwOz-9LqB2E_7V3pggOGAGt-Da2Kio2LRsE"', ttl:1, prio:'', proxy:false },
+    { name:'acme-challenge',    type:'TXT',   content:'"FwwAauFAr2BODm0Nt2ckElBd9ZVW5HXbQWeGKF9EVw"',   ttl:1, prio:'', proxy:false },
+    { name:'_dmarc',            type:'TXT',   content:'"v=DMARC1; p=quarantine; adkim=s; aspf=s"',       ttl:1, prio:'', proxy:false },
+    { name:'default_domainkey', type:'TXT',   content:'"v=DKIM1; p=MIIBjANBgkqhkiG9w0BAQEFAAOCAQBAM…"', ttl:1, prio:'', proxy:false },
+    { name:'_domainkey',        type:'TXT',   content:'"o=~"',                              ttl:1, prio:'', proxy:false },
+    { name:'@',                 type:'TXT',   content:'"v=spf1 +a +mx +xcoffee.deinserverhost.de ~all"', ttl:1, prio:'', proxy:false },
+  ];
+
+  let activeFilter = 'all';
+  let searchQuery  = '';
+  let selectedIdxs = new Set(); // indices into DNS_DATA
+
+  /* ── RENDER TABLE ── */
+  function getVisibleRows() {
+    return DNS_DATA.map((r, i) => ({ r, i })).filter(({ r }) => {
+      const typeOk = activeFilter === 'all' || r.type === activeFilter;
+      const q = searchQuery.toLowerCase();
+      const searchOk = !q || r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q) || r.content.toLowerCase().includes(q);
+      return typeOk && searchOk;
+    });
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('dnsBody');
+    const visible = getVisibleRows();
+    tbody.innerHTML = visible.map(({ r, i }) => {
+      const checked = selectedIdxs.has(i);
+      return `
+      <tr class="${checked ? 'selected' : ''}" id="row-${i}">
+        <td class="td-check"><input type="checkbox" class="row-checkbox" ${checked ? 'checked' : ''} onchange="toggleRow(${i}, this)" /></td>
+        <td class="name">${r.name}</td>
+        <td class="type"><span class="type-${r.type}">${r.type}</span></td>
+        <td class="content" title="${r.content}">${r.content}</td>
+        <td class="ttl" style="text-align:center">${r.ttl === 1 ? 'Auto' : r.ttl}</td>
+        <td class="prio" style="text-align:center">${r.prio || '—'}</td>
+        <td class="proxy" style="text-align:center"><span class="proxy-icon ${r.proxy ? 'proxy-on' : 'proxy-off'}">${r.proxy ? '◈' : '○'}</span></td>
+        <td class="actions">
+          <button class="row-btn" onclick="showToast('${r.name} (${r.type}) bearbeiten','')">Bearbeiten</button>
+          <button class="row-btn del" onclick="quickDelete(${i})">Löschen</button>
+        </td>
+      </tr>`;
+    }).join('');
+    updateSelectionUI();
+  }
+
+  /* ── SELECTION ── */
+  function toggleRow(idx, cb) {
+    if (cb.checked) selectedIdxs.add(idx);
+    else selectedIdxs.delete(idx);
+    const row = document.getElementById('row-' + idx);
+    if (row) row.classList.toggle('selected', cb.checked);
+    updateSelectionUI();
+  }
+
+  function toggleAll(masterCb) {
+    const visible = getVisibleRows();
+    visible.forEach(({ i }) => {
+      if (masterCb.checked) selectedIdxs.add(i);
+      else selectedIdxs.delete(i);
+    });
+    renderTable();
+  }
+
+  function clearSelection() {
+    selectedIdxs.clear();
+    const master = document.getElementById('checkAll');
+    if (master) master.checked = false;
+    renderTable();
+  }
+
+  function updateSelectionUI() {
+    const count = selectedIdxs.size;
+    const bar   = document.getElementById('selectionBar');
+    const selC  = document.getElementById('selCount');
+    const topBtn = document.getElementById('btnDeleteSelected');
+    const topCount = document.getElementById('deleteCount');
+
+    bar.classList.toggle('visible', count > 0);
+    selC.textContent = count;
+    topBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+    topCount.textContent = count > 0 ? count : '';
+
+    // sync master checkbox state
+    const visible = getVisibleRows();
+    const master = document.getElementById('checkAll');
+    if (master && visible.length > 0) {
+      const allChecked = visible.every(({ i }) => selectedIdxs.has(i));
+      const someChecked = visible.some(({ i }) => selectedIdxs.has(i));
+      master.checked = allChecked;
+      master.indeterminate = someChecked && !allChecked;
+    }
+  }
+
+  /* ── QUICK DELETE (single row button) ── */
+  function quickDelete(idx) {
+    selectedIdxs.clear();
+    selectedIdxs.add(idx);
+    openDeleteModal();
+  }
+
+  /* ── DELETE MODAL ── */
+  function openDeleteModal() {
+    if (selectedIdxs.size === 0) return;
+    const list = document.getElementById('delList');
+    list.innerHTML = [...selectedIdxs].map(i => {
+      const r = DNS_DATA[i];
+      return `<div class="del-item">
+        <span class="di-name">${r.name}</span>
+        <span class="di-type type-${r.type}">${r.type}</span>
+        <span class="di-content">${r.content}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('deleteModalBackdrop').classList.add('show');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModalBackdrop').classList.remove('show');
+  }
+
+  function confirmDelete() {
+    const count = selectedIdxs.size;
+    // In real impl: fire DELETE /zones/{id}/dns_records/{record_id} per selected
+    const names = [...selectedIdxs].map(i => DNS_DATA[i].name).join(', ');
+    closeDeleteModal();
+    clearSelection();
+    showToast(`${count} Record${count > 1 ? 's' : ''} gelöscht: ${names}`, 'red');
+    addLog(`ACT: DELETE ${count} record(s): ${names}`);
+  }
+
+  /* ── FILTER / SEARCH ── */
+  function setFilter(type, btn) {
+    activeFilter = type;
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+  function filterTable(val) {
+    searchQuery = val;
+    renderTable();
+  }
+
+  /* ── DNS SAVE ── */
+  function saveDns() {
+    showToast('DNS erfolgreich gespeichert ✓', 'green');
+    addLog('OK: DNS Records zu Cloudflare übertragen. cr1ms0n.xyz aktualisiert.');
+  }
+
+  /* ── ADD MODAL ── */
+  function openModal() { document.getElementById('modalBackdrop').classList.add('show'); }
+  function closeAddModal() { document.getElementById('modalBackdrop').classList.remove('show'); }
+  function updateTypeHint(sel) {
+    const hints = { A:'IPv4 Adresse', AAAA:'IPv6 Adresse', CNAME:'Zieldomain', MX:'Mailserver', TXT:'TXT-String', SRV:'Zieldomain' };
+    document.getElementById('contentHint').placeholder = hints[sel.value] || 'Content';
+  }
+
+  /* ── TOAST ── */
+  // variant: '' (cyan/default) | 'green' | 'red'
+  function showToast(text, variant) {
+    const stack = document.getElementById('toastStack');
+    if (stack.children.length >= 3) stack.firstChild.remove();
+    const t = document.createElement('div');
+    t.className = 'toast' + (variant ? ' ' + variant : '');
+    const labels = { green: 'DNS MGR', red: 'FEHLER', '': 'DNS MGR' };
+    t.innerHTML = `<strong>${labels[variant] || 'DNS MGR'}</strong><p>${text}</p>`;
+    stack.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  /* ── LIVEFEED ── */
+  function addLog(msg) {
+    const body = document.getElementById('livefeedBody');
+    const now = new Date();
+    const ts = now.toISOString().replace('T',' ').slice(0,23);
+    const cls = msg.startsWith('OK') ? 'ok' : msg.startsWith('ACT') ? 'act' : 'warn';
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `<span class="ts">[${ts}]</span> <span class="${cls}">${msg.split(':')[0]}:</span> ${msg.split(':').slice(1).join(':').trim()}`;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  /* ── DEV NOTICE TOGGLE ── */
+  function toggleNotice() {
+    const body = document.getElementById('noticeBody');
+    const icon = document.getElementById('noticeIcon');
+    const hidden = body.classList.toggle('hidden');
+    icon.textContent = hidden ? '▸' : '▾';
+  }
+
+  renderTable();
+</script>
+</body>
+</html>

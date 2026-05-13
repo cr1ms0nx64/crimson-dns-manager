@@ -1,0 +1,28 @@
+<UserControl
+    x:Class="CrimsonDnsManager.App.Controls.FilterChip"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsTabStop="True"
+    UseSystemFocusVisuals="False"
+    KeyDown="Root_OnKeyDown">
+    <Border x:Name="ChipRoot"
+            MinHeight="0"
+            Padding="11,5"
+            BorderThickness="1"
+            CornerRadius="999"
+            Background="Transparent"
+            BorderBrush="{StaticResource LineBrush}"
+            PointerEntered="ChipRoot_OnPointerEntered"
+            PointerExited="ChipRoot_OnPointerExited"
+            Tapped="ChipRoot_OnTapped">
+        <TextBlock x:Name="ChipText"
+                   Text="{Binding Text, ElementName=Root}"
+                   FontFamily="{StaticResource SoraFont}"
+                   FontSize="11.5"
+                   LineHeight="14"
+                   LineStackingStrategy="BlockLineHeight"
+                   Foreground="{StaticResource MutedBrush}"
+                   VerticalAlignment="Center" />
+    </Border>
+</UserControl>

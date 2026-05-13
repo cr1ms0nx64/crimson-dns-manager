@@ -1,0 +1,145 @@
+<UserControl
+    x:Class="CrimsonDnsManager.App.Controls.EditRecordDialog"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Border Width="540"
+            MaxWidth="540"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            CornerRadius="22"
+            BorderThickness="1"
+            BorderBrush="#4740C8F4"
+            Background="#FF060E20"
+            Padding="22">
+        <StackPanel Spacing="0">
+            <TextBlock Text="✎ RECORD BEARBEITEN"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="9"
+                       Foreground="{StaticResource CyanBrush}"
+                       CharacterSpacing="160"
+                       Margin="0,0,0,5" />
+
+            <TextBlock x:Name="DialogTitle"
+                       FontFamily="{StaticResource SoraBoldFont}"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextBrush}"
+                       Margin="0,0,0,4" />
+
+            <TextBlock x:Name="DialogSub"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="10.5"
+                       Foreground="{StaticResource MutedBrush}"
+                       Margin="0,0,0,14" />
+
+            <Grid ColumnSpacing="8" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Spacing="4">
+                    <TextBlock Text="Typ" Style="{StaticResource FieldLabelStyle}" />
+                    <ComboBox x:Name="TypeCombo"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="TypeCombo_SelectionChanged"
+                              Style="{StaticResource CrimsonComboBoxStyle}">
+                        <x:String>A</x:String>
+                        <x:String>AAAA</x:String>
+                        <x:String>CNAME</x:String>
+                        <x:String>MX</x:String>
+                        <x:String>TXT</x:String>
+                        <x:String>SRV</x:String>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                    <TextBlock Text="Name" Style="{StaticResource FieldLabelStyle}" />
+                    <TextBox x:Name="NameBox"
+                             PlaceholderText="@ oder subdomain"
+                             TextChanged="AnyTextBox_TextChanged"
+                             Style="{StaticResource CrimsonTextBoxStyle}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                    <TextBlock Text="Content" Style="{StaticResource FieldLabelStyle}" />
+                    <TextBox x:Name="ContentBox"
+                             PlaceholderText="IPv4 Adresse"
+                             TextChanged="AnyTextBox_TextChanged"
+                             Style="{StaticResource CrimsonTextBoxStyle}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
+                    <TextBlock Text="TTL" Style="{StaticResource FieldLabelStyle}" />
+                    <TextBox x:Name="TtlBox"
+                             PlaceholderText="1 (Auto)"
+                             TextChanged="AnyTextBox_TextChanged"
+                             Style="{StaticResource CrimsonTextBoxStyle}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                    <TextBlock Text="Priority" Style="{StaticResource FieldLabelStyle}" />
+                    <TextBox x:Name="PrioBox"
+                             PlaceholderText="— (optional)"
+                             TextChanged="AnyTextBox_TextChanged"
+                             Style="{StaticResource CrimsonTextBoxStyle}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Spacing="4">
+                    <CheckBox x:Name="ProxyCheck"
+                              Content="Proxied (Cloudflare CDN)"
+                              Checked="ProxyCheck_Changed"
+                              Unchecked="ProxyCheck_Changed"
+                              Style="{StaticResource CrimsonCheckBoxStyle}" />
+                    <TextBlock x:Name="ProxyNote"
+                               FontSize="10.5"
+                               Foreground="{StaticResource MutedBrush}"
+                               Visibility="Collapsed" />
+                </StackPanel>
+            </Grid>
+
+            <Border x:Name="DirtyBanner"
+                    Visibility="Collapsed"
+                    CornerRadius="10"
+                    BorderThickness="1"
+                    BorderBrush="#2940C8F4"
+                    Background="#0D40C8F4"
+                    Padding="11,8"
+                    Margin="0,10,0,0">
+                <TextBlock Text="✎ Ungespeicherte Änderungen - Speichern überträgt per PATCH /dns_records/{id}"
+                           FontSize="11.5"
+                           Foreground="{StaticResource Cyan2Brush}"
+                           TextWrapping="Wrap" />
+            </Border>
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="7"
+                        Margin="0,14,0,0">
+                <Button Content="Abbrechen"
+                        Click="CancelBtn_Click"
+                        Style="{StaticResource CrimsonGhostButtonStyle}" />
+                <Button Click="SaveBtn_Click"
+                        Style="{StaticResource CrimsonPrimaryButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="✓"
+                                   FontFamily="{StaticResource MonoSemiBoldFont}"
+                                   Foreground="{StaticResource Cyan2Brush}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="Speichern"
+                                   Foreground="{StaticResource Cyan2Brush}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

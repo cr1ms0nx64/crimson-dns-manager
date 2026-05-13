@@ -1,0 +1,121 @@
+<UserControl
+    x:Class="CrimsonDnsManager.App.Controls.DnsRecordRow"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid x:Name="RowGrid"
+          MinHeight="39"
+          Background="Transparent"
+          PointerEntered="RowGrid_PointerEntered"
+          PointerExited="RowGrid_PointerExited">
+        <Border x:Name="SelectionRail"
+                BorderThickness="2,0,0,0"
+                BorderBrush="Transparent"
+                Background="Transparent" />
+        <Border Height="1"
+                VerticalAlignment="Bottom"
+                Background="{StaticResource TableRowLineBrush}" />
+
+        <Grid ColumnSpacing="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="36" />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="50" />
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="160" />
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Grid.Column="0"
+                      IsChecked="{x:Bind Record.IsSelected, Mode=TwoWay}"
+                      Checked="Checkbox_Changed"
+                      Unchecked="Checkbox_Changed"
+                      Style="{StaticResource CrimsonRowCheckBoxStyle}"
+                      VerticalAlignment="Center"
+                      HorizontalAlignment="Center" />
+
+            <TextBlock Grid.Column="1"
+                       Text="{x:Bind Record.Name, Mode=OneWay}"
+                       FontFamily="{StaticResource MonoSemiBoldFont}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource TextBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"
+                       Padding="14,9" />
+
+            <TextBlock Grid.Column="2"
+                       x:Name="TypeText"
+                       Text="{x:Bind Record.Type, Mode=OneWay}"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Padding="14,9" />
+
+            <TextBlock Grid.Column="3"
+                       Text="{x:Bind Record.Content, Mode=OneWay}"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="11"
+                       Foreground="{StaticResource SoftBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="380"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Padding="14,9"
+                       ToolTipService.ToolTip="{x:Bind Record.Content, Mode=OneWay}" />
+
+            <TextBlock Grid.Column="4"
+                       x:Name="TtlText"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="11"
+                       Foreground="{StaticResource SoftBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Padding="0,9" />
+
+            <TextBlock Grid.Column="5"
+                       x:Name="PriorityText"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="11"
+                       Foreground="{StaticResource SoftBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Padding="0,9" />
+
+            <TextBlock Grid.Column="6"
+                       x:Name="ProxyIcon"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="14"
+                       Padding="0,9" />
+
+            <StackPanel Grid.Column="7"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Spacing="4"
+                        Padding="0,9,14,9">
+                <Button Click="EditBtn_Click"
+                        PointerEntered="EditButton_PointerEntered"
+                        PointerExited="RowActionButton_PointerExited"
+                        Style="{StaticResource CrimsonRowActionButtonStyle}">
+                    <TextBlock x:Name="EditButtonText"
+                               Text="Bearbeiten"
+                               Foreground="{StaticResource MutedBrush}" />
+                </Button>
+                <Button Click="DeleteBtn_Click"
+                        PointerEntered="DeleteButton_PointerEntered"
+                        PointerExited="RowActionButton_PointerExited"
+                        Style="{StaticResource CrimsonRowDeleteButtonStyle}">
+                    <TextBlock x:Name="DeleteButtonText"
+                               Text="Löschen"
+                               Foreground="{StaticResource MutedBrush}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

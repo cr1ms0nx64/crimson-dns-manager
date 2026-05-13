@@ -1,0 +1,168 @@
+<UserControl
+    x:Class="CrimsonDnsManager.App.Views.DnsRecordsView"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CrimsonDnsManager.App.Controls"
+    xmlns:converters="using:CrimsonDnsManager.App.Converters">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="VisibleWhenTrue" />
+        <converters:LivefeedLevelBrushConverter x:Key="LivefeedLevelBrush" />
+        <converters:FilterChipActiveConverter x:Key="FilterChipActive" />
+    </UserControl.Resources>
+
+    <Grid Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="26,22,26,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="{Binding PageKicker}" Style="{StaticResource KickerTextStyle}" Margin="0,0,0,5" />
+                <TextBlock Text="DNS Records" Style="{StaticResource PageTitleTextStyle}" />
+                <TextBlock Text="Cloudflare DNS Records mit lokalen Backups, sicherer Vorschau und integriertem Updater."
+                           Style="{StaticResource PageSubtitleTextStyle}"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                <controls:StatusBadge Text="{Binding LoadedBadgeText}" Variant="{Binding LoadedBadgeVariant}" />
+                <controls:StatusBadge Text="Zone aktiv" Variant="neu" />
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <StackPanel Orientation="Horizontal" Spacing="10" Padding="26,16,26,0">
+                <controls:StatPill Value="{Binding ActiveZoneName}" Label="aktive Zone" ShowDot="True" />
+                <controls:StatPill Value="{Binding ACountText}" Label="A-Records" />
+                <controls:StatPill Value="{Binding AaaaCountText}" Label="AAAA" />
+                <controls:StatPill Value="{Binding TxtCountText}" Label="TXT" />
+                <controls:StatPill Value="{Binding MxCountText}" Label="MX" />
+                <controls:StatPill Value="{Binding SrvCountText}" Label="SRV" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Padding="26,14,26,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0" Width="220" Style="{StaticResource CrimsonTextBoxStyle}" FontFamily="{StaticResource SoraFont}" FontSize="12.5" PlaceholderText="Name, Typ oder Content…" Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="6,0,0,0">
+                <controls:FilterChip Text="Alle" Command="{Binding SetFilterCommand}" CommandParameter="Alle" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=Alle}" />
+                <controls:FilterChip Text="A" Command="{Binding SetFilterCommand}" CommandParameter="A" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=A}" />
+                <controls:FilterChip Text="AAAA" Command="{Binding SetFilterCommand}" CommandParameter="AAAA" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=AAAA}" />
+                <controls:FilterChip Text="CNAME" Command="{Binding SetFilterCommand}" CommandParameter="CNAME" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=CNAME}" />
+                <controls:FilterChip Text="MX" Command="{Binding SetFilterCommand}" CommandParameter="MX" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=MX}" />
+                <controls:FilterChip Text="TXT" Command="{Binding SetFilterCommand}" CommandParameter="TXT" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=TXT}" />
+                <controls:FilterChip Text="SRV" Command="{Binding SetFilterCommand}" CommandParameter="SRV" IsActive="{Binding FilterType, Converter={StaticResource FilterChipActive}, ConverterParameter=SRV}" />
+            </StackPanel>
+        </Grid>
+
+        <controls:DnsRecordTable Grid.Row="3"
+                                 Grid.RowSpan="2"
+                                 Margin="26,0,26,0"
+                                 Records="{Binding FilteredRecords}"
+                                 HasRecords="{Binding HasRecords}"
+                                 HasSelection="{Binding HasSelection}"
+                                 SelectedCount="{Binding SelectedCount}"
+                                 ClearSelectionCommand="{Binding ClearSelectionCommand}"
+                                 DeleteSelectedCommand="{Binding OpenDeleteModalCommand}"
+                                 EditRecordCommand="{Binding OpenEditRecordCommand}"
+                                 DeleteRecordCommand="{Binding SelectRecordForDeleteCommand}"
+                                 LoadRecordsCommand="{Binding LoadRecordsCommand}" />
+
+        <Border Grid.Row="5" Margin="26,14,26,26" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="16" Background="{StaticResource LivefeedBackgroundBrush}" MaxHeight="150">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="96" />
+                </Grid.RowDefinitions>
+                <Border Padding="14,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Background="#05FFFFFF">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Ellipse Width="6" Height="6" Fill="{StaticResource GreenBrush}" />
+                            <TextBlock Text="LIVEFEED" FontFamily="{StaticResource MonoFont}" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource SoftBrush}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Leeren" Style="{StaticResource CrimsonGhostButtonStyle}" MinHeight="22" Padding="8,3" FontSize="10" Command="{Binding ClearLivefeedCommand}" />
+                    </Grid>
+                </Border>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"><Border Padding="14,10">
+                    <ItemsControl ItemsSource="{Binding LivefeedEntries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="[" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="#334455" />
+                                    <TextBlock Text="{Binding TimestampText}" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="#334455" />
+                                    <TextBlock Text="]" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="#334455" />
+                                    <TextBlock Text="{Binding LevelText}" FontFamily="{StaticResource MonoSemiBoldFont}" FontSize="10.5" Foreground="{Binding Level, Converter={StaticResource LivefeedLevelBrush}}" />
+                                    <TextBlock Text=":" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{Binding Level, Converter={StaticResource LivefeedLevelBrush}}" />
+                                    <TextBlock Text="{Binding Message}" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </Border>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Grid Grid.RowSpan="6" Background="{StaticResource ModalBackdropBrush}" Visibility="{Binding IsAddRecordOpen, Converter={StaticResource VisibleWhenTrue}}">
+            <Border Style="{StaticResource ModalShellStyle}" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="DNS Record" Style="{StaticResource KickerTextStyle}" />
+                    <TextBlock Text="Record hinzufügen" FontFamily="{StaticResource SoraSemiBoldFont}" FontSize="16" Foreground="{StaticResource TextBrush}" Margin="0,0,0,6" />
+                    <Grid ColumnSpacing="8" RowSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Spacing="4">
+                            <TextBlock Text="Typ" Style="{StaticResource FieldLabelTextStyle}" />
+                            <ComboBox SelectedItem="{Binding DraftRecord.Type, Mode=TwoWay}" Style="{StaticResource CrimsonComboBoxStyle}">
+                                <x:String>A</x:String><x:String>AAAA</x:String><x:String>CNAME</x:String><x:String>MX</x:String><x:String>TXT</x:String><x:String>SRV</x:String>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4"><TextBlock Text="Name" Style="{StaticResource FieldLabelTextStyle}" /><TextBox Text="{Binding DraftRecord.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="@ oder subdomain" Style="{StaticResource CrimsonTextBoxStyle}" /></StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Content" Style="{StaticResource FieldLabelTextStyle}" /><TextBox Text="{Binding DraftRecord.Content, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="IPv4 Adresse" Style="{StaticResource CrimsonTextBoxStyle}" /></StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4"><TextBlock Text="TTL" Style="{StaticResource FieldLabelTextStyle}" /><TextBox Text="{Binding DraftRecord.Ttl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="1 Auto" Style="{StaticResource CrimsonTextBoxStyle}" /></StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4"><TextBlock Text="Priority" Style="{StaticResource FieldLabelTextStyle}" /><TextBox Text="{Binding DraftRecord.Priority, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="optional" Style="{StaticResource CrimsonTextBoxStyle}" /></StackPanel>
+                        <CheckBox Grid.Row="3" Grid.ColumnSpan="2" Content="Proxied Cloudflare CDN" IsChecked="{Binding DraftRecord.Proxied, Mode=TwoWay}" Style="{StaticResource CrimsonCheckBoxStyle}" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Right" Margin="0,6,0,0">
+                        <Button Content="Abbrechen" Style="{StaticResource CrimsonGhostButtonStyle}" Command="{Binding CloseAddRecordCommand}" />
+                        <Button Content="Record erstellen" Style="{StaticResource CrimsonPrimaryButtonStyle}" Command="{Binding CreateRecordCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.RowSpan="6" Background="{StaticResource ModalBackdropBrush}" Visibility="{Binding IsEditRecordOpen, Converter={StaticResource VisibleWhenTrue}}">
+            <controls:EditRecordDialog Record="{Binding EditingRecord}"
+                                       Domain="{Binding ActiveZoneName}"
+                                       SaveCommand="{Binding SaveEditedRecordCommand}"
+                                       CancelCommand="{Binding CloseEditRecordCommand}" />
+        </Grid>
+
+        <Grid Grid.RowSpan="6" Background="{StaticResource ModalBackdropBrush}" Visibility="{Binding IsDeleteModalOpen, Converter={StaticResource VisibleWhenTrue}}">
+            <controls:DeleteConfirmDialog Records="{Binding SelectedRecords}"
+                                          CancelCommand="{Binding CloseDeleteModalCommand}"
+                                          ConfirmCommand="{Binding ConfirmDeleteCommand}" />
+        </Grid>
+    </Grid>
+</UserControl>
+
+
