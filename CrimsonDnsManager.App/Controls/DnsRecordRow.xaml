@@ -6,7 +6,6 @@
 
     <Grid x:Name="RowGrid"
           MinHeight="39"
-          MinWidth="1240"
           Background="Transparent"
           PointerEntered="RowGrid_PointerEntered"
           PointerExited="RowGrid_PointerExited">
@@ -21,7 +20,7 @@
         <Grid ColumnSpacing="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="36" />
-                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="220" />
                 <ColumnDefinition Width="72" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="60" />
