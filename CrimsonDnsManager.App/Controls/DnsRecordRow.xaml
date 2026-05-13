@@ -6,6 +6,7 @@
 
     <Grid x:Name="RowGrid"
           MinHeight="39"
+          MinWidth="1240"
           Background="Transparent"
           PointerEntered="RowGrid_PointerEntered"
           PointerExited="RowGrid_PointerExited">
@@ -20,8 +21,8 @@
         <Grid ColumnSpacing="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="36" />
-                <ColumnDefinition Width="120" />
-                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="72" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="60" />
                 <ColumnDefinition Width="50" />
@@ -45,7 +46,8 @@
                        Foreground="{StaticResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
                        VerticalAlignment="Center"
-                       Padding="14,9" />
+                       Padding="14,9"
+                       ToolTipService.ToolTip="{x:Bind Record.Name, Mode=OneWay}" />
 
             <TextBlock Grid.Column="2"
                        x:Name="TypeText"
@@ -61,7 +63,7 @@
                        FontSize="11"
                        Foreground="{StaticResource SoftBrush}"
                        TextTrimming="CharacterEllipsis"
-                       MaxWidth="380"
+                       MaxWidth="560"
                        HorizontalAlignment="Left"
                        VerticalAlignment="Center"
                        Padding="14,9"
