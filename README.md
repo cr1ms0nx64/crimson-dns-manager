@@ -2,6 +2,8 @@
 
 Windows-App zur Verwaltung von Cloudflare-DNS: Zonen laden, Einträge suchen, erstellen, bearbeiten und nach Bestätigung löschen.
 
+![Crimson DNS Manager](docs/dns-manager.png)
+
 **Technik:** C# · .NET 8 · WinUI 3 · MVVM · SQLite
 
 ## Einrichtung
