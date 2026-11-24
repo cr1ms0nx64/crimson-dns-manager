@@ -9,6 +9,7 @@ public partial class DnsRecord : ObservableObject
     public string? Id { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanBeProxied))]
     [JsonPropertyName("type")]
     private string type = "A";
 
@@ -21,10 +22,12 @@ public partial class DnsRecord : ObservableObject
     private string content = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayTtl))]
     [JsonPropertyName("ttl")]
     private int ttl = 1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayPriority))]
     [JsonPropertyName("priority")]
     private int? priority;
 

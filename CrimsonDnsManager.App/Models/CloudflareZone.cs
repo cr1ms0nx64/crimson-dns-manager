@@ -12,6 +12,7 @@ public partial class CloudflareZone : ObservableObject
     public string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
     private bool isActive;
 
     public string StatusText => IsActive ? "aktiv" : "bereit";

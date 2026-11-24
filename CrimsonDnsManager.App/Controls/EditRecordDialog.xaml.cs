@@ -1,4 +1,5 @@
 using CrimsonDnsManager.App.Models;
+using CrimsonDnsManager.App.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System.Globalization;
@@ -80,6 +81,7 @@ public sealed partial class EditRecordDialog : UserControl
     private void LoadRecord(DnsRecord? record)
     {
         _loading = true;
+        ValidationError.Visibility = Visibility.Collapsed;
 
         if (record is null)
         {
@@ -197,19 +199,29 @@ public sealed partial class EditRecordDialog : UserControl
             return;
         }
 
-        var edited = BuildEditedRecord();
-        ExecuteCommand(SaveCommand, edited);
+        try
+        {
+            var edited = BuildEditedRecord();
+            CloudflareApiService.ValidateRecord(edited);
+            ValidationError.Visibility = Visibility.Collapsed;
+            ExecuteCommand(SaveCommand, edited);
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidOperationException)
+        {
+            ValidationError.Text = ex.Message;
+            ValidationError.Visibility = Visibility.Visible;
+        }
     }
 
     private DnsRecord BuildEditedRecord()
     {
         var type = GetSelectedType();
-        var ttl = int.TryParse(TtlBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedTtl)
-            ? Math.Max(1, parsedTtl)
-            : 1;
+        var ttl = string.IsNullOrWhiteSpace(TtlBox.Text) ? 1
+            : int.TryParse(TtlBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedTtl)
+                ? parsedTtl : throw new FormatException("TTL muss eine ganze Zahl sein.");
         var priority = int.TryParse(PrioBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedPriority)
             ? parsedPriority
-            : (int?)null;
+            : string.IsNullOrWhiteSpace(PrioBox.Text) ? (int?)null : throw new FormatException("Priority muss eine ganze Zahl sein.");
 
         return new DnsRecord
         {

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <Compile Include="../../CrimsonDnsManager.App/Services/SettingsService.cs" Link="SettingsService.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Data/AppDbContext.cs" Link="AppDbContext.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Models/AppSettings.cs" Link="AppSettings.cs" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <Compile Include="../../CrimsonDnsManager.App/Models/DnsRecord.cs" Link="DnsRecord.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Models/CloudflareZone.cs" Link="CloudflareZone.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Models/LivefeedEntry.cs" Link="LivefeedEntry.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Services/CloudflareApiService.cs" Link="CloudflareApiService.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Services/DnsRecordService.cs" Link="DnsRecordService.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Services/ISecretService.cs" Link="ISecretService.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Services/LivefeedService.cs" Link="LivefeedService.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/Data/AppPaths.cs" Link="AppPaths.cs" />
+    <Compile Include="../../CrimsonDnsManager.App/ViewModels/DnsRecordsViewModel.cs" Link="DnsRecordsViewModel.cs" />
+  </ItemGroup>
+</Project>

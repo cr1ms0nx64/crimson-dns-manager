@@ -26,7 +26,7 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         }
 
         var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<TokenVerifyResult>>(JsonOptions, cancellationToken);
-        var ok = payload?.Success == true;
+        var ok = payload?.Success == true && payload.Result?.Status == "active";
         if (ok)
         {
             livefeed.Success("Cloudflare Verbindung erfolgreich getestet.");
@@ -44,15 +44,7 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         var route = string.IsNullOrWhiteSpace(domain)
             ? "zones?per_page=50"
             : $"zones?name={Uri.EscapeDataString(domain.Trim())}&per_page=50";
-
-        using var request = await CreateRequestAsync(HttpMethod.Get, route, cancellationToken);
-        livefeed.Action($"Cloudflare API: GET /{route}");
-
-        using var response = await httpClient.SendAsync(request, cancellationToken);
-        await EnsureCloudflareSuccessAsync(response, cancellationToken);
-
-        var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<List<CloudflareZone>>>(JsonOptions, cancellationToken);
-        var zones = payload?.Result ?? [];
+        var zones = await GetAllPagesAsync<CloudflareZone>(route, cancellationToken);
         livefeed.Success($"Zonen geladen: {zones.Count}");
         return zones;
     }
@@ -60,21 +52,26 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
     public async Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(string zoneId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(zoneId))
-        {
             throw new InvalidOperationException("Keine Zone ID gesetzt.");
-        }
 
-        var route = $"zones/{zoneId}/dns_records?per_page=100&page=1";
-        using var request = await CreateRequestAsync(HttpMethod.Get, route, cancellationToken);
-        livefeed.Action($"Cloudflare API: GET /zones/{ShortId(zoneId)}/dns_records?per_page=100&page=1");
-
-        using var response = await httpClient.SendAsync(request, cancellationToken);
-        await EnsureCloudflareSuccessAsync(response, cancellationToken);
-
-        var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<List<DnsRecord>>>(JsonOptions, cancellationToken);
-        var records = payload?.Result ?? [];
+        var records = await GetAllPagesAsync<DnsRecord>($"zones/{zoneId}/dns_records?per_page=100", cancellationToken);
         livefeed.Success($"DNS Records geladen. Records: {records.Count}");
         return records;
+    }
+
+    private async Task<IReadOnlyList<T>> GetAllPagesAsync<T>(string route, CancellationToken cancellationToken)
+    {
+        var results = new List<T>();
+        for (var page = 1; ; page++)
+        {
+            using var request = await CreateRequestAsync(HttpMethod.Get, $"{route}&page={page}", cancellationToken);
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+            var payload = await ReadSuccessAsync<List<T>>(response, cancellationToken);
+            results.AddRange(payload.Result!);
+            if (page >= (payload.ResultInfo?.TotalPages ?? 1)) return results;
+            if (payload.Result!.Count == 0)
+                throw new HttpRequestException("Cloudflare lieferte eine leere Zwischenseite. Bitte erneut laden.");
+        }
     }
 
     public async Task<DnsRecord> CreateRecordAsync(string zoneId, DnsRecord record, CancellationToken cancellationToken = default)
@@ -85,10 +82,9 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         livefeed.Action($"Cloudflare API: POST /zones/{ShortId(zoneId)}/dns_records");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        await EnsureCloudflareSuccessAsync(response, cancellationToken);
-        var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<DnsRecord>>(JsonOptions, cancellationToken);
+        var payload = await ReadSuccessAsync<DnsRecord>(response, cancellationToken);
         livefeed.Success($"Record erstellt: {record.Name} {record.Type}");
-        return payload?.Result ?? record;
+        return payload.Result!;
     }
 
     public async Task<DnsRecord> UpdateRecordAsync(string zoneId, DnsRecord record, CancellationToken cancellationToken = default)
@@ -100,14 +96,13 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
 
         ValidateRecord(record);
         var route = $"zones/{zoneId}/dns_records/{record.Id}";
-        using var request = await CreateJsonRequestAsync(HttpMethod.Put, route, ToPayload(record), cancellationToken);
-        livefeed.Action($"Cloudflare API: PUT /zones/{ShortId(zoneId)}/dns_records/{ShortId(record.Id)}");
+        using var request = await CreateJsonRequestAsync(HttpMethod.Patch, route, ToPayload(record), cancellationToken);
+        livefeed.Action($"Cloudflare API: PATCH /zones/{ShortId(zoneId)}/dns_records/{ShortId(record.Id)}");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        await EnsureCloudflareSuccessAsync(response, cancellationToken);
-        var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<DnsRecord>>(JsonOptions, cancellationToken);
+        var payload = await ReadSuccessAsync<DnsRecord>(response, cancellationToken);
         livefeed.Success($"Record geändert: {record.Name} {record.Type}");
-        return payload?.Result ?? record;
+        return payload.Result!;
     }
 
     public async Task<DnsRecord> PatchRecordAsync(string zoneId, DnsRecord original, DnsRecord updated, CancellationToken cancellationToken = default)
@@ -132,10 +127,9 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         livefeed.Action($"Cloudflare API: PATCH /zones/{ShortId(zoneId)}/dns_records/{ShortId(original.Id)}");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        await EnsureCloudflareSuccessAsync(response, cancellationToken);
-        var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<DnsRecord>>(JsonOptions, cancellationToken);
+        var payload = await ReadSuccessAsync<DnsRecord>(response, cancellationToken);
         livefeed.Success($"Record bearbeitet: {updated.Name} {updated.Type}");
-        return payload?.Result ?? updated;
+        return payload.Result!;
     }
 
     public async Task DeleteRecordAsync(string zoneId, DnsRecord record, CancellationToken cancellationToken = default)
@@ -150,7 +144,7 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         livefeed.Action($"Cloudflare API: DELETE /zones/{ShortId(zoneId)}/dns_records/{ShortId(record.Id)}");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        await EnsureCloudflareSuccessAsync(response, cancellationToken);
+        await ReadSuccessAsync<JsonElement>(response, cancellationToken);
         livefeed.Success($"Record gelöscht: {record.Name} {record.Type}");
     }
 
@@ -229,7 +223,7 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         return patch;
     }
 
-    private static void ValidateRecord(DnsRecord record)
+    public static void ValidateRecord(DnsRecord record)
     {
         if (string.IsNullOrWhiteSpace(record.Type))
         {
@@ -246,6 +240,17 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
             throw new InvalidOperationException("Record Content fehlt.");
         }
 
+        if (record.Ttl != 1 && (record.Ttl < 30 || record.Ttl > 86400))
+            throw new InvalidOperationException("TTL muss Auto (1) oder zwischen 30 und 86400 Sekunden sein.");
+        if (record.Priority is < 0 or > 65535)
+            throw new InvalidOperationException("Priority muss zwischen 0 und 65535 liegen.");
+        if (record.Type is "A" or "AAAA")
+        {
+            var family = record.Type == "A" ? System.Net.Sockets.AddressFamily.InterNetwork : System.Net.Sockets.AddressFamily.InterNetworkV6;
+            if (!System.Net.IPAddress.TryParse(record.Content, out var address) || address.AddressFamily != family)
+                throw new InvalidOperationException($"Ungültige {record.Type}-Adresse.");
+        }
+
         if (record.Type is "MX" or "SRV" && record.Priority is null)
         {
             throw new InvalidOperationException("Priority ist für diesen Record Typ erforderlich.");
@@ -257,16 +262,16 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
         }
     }
 
-    private static async Task EnsureCloudflareSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private static async Task<CloudflareResponse<T>> ReadSuccessAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        if (response.IsSuccessStatusCode)
-        {
-            return;
-        }
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"Cloudflare API Fehler HTTP {(int)response.StatusCode}.", null, response.StatusCode);
 
-        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
-        var safe = raw.Length > 500 ? raw[..500] : raw;
-        throw new HttpRequestException($"Cloudflare API Fehler HTTP {(int)response.StatusCode}: {safe}");
+        var payload = await response.Content.ReadFromJsonAsync<CloudflareResponse<T>>(JsonOptions, cancellationToken);
+        if (payload?.Success != true || payload.Result is null
+            || payload.Result is JsonElement element && element.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            throw new HttpRequestException("Cloudflare hat den Vorgang nicht bestätigt. Bitte Berechtigungen und Eingaben prüfen.");
+        return payload;
     }
 
     private static string ShortId(string value)
@@ -286,6 +291,15 @@ public sealed class CloudflareApiService(HttpClient httpClient, ISecretService s
 
         [JsonPropertyName("result")]
         public T? Result { get; set; }
+
+        [JsonPropertyName("result_info")]
+        public PageInfo? ResultInfo { get; set; }
+    }
+
+    private sealed class PageInfo
+    {
+        [JsonPropertyName("total_pages")]
+        public int TotalPages { get; set; }
     }
 
     private sealed class TokenVerifyResult

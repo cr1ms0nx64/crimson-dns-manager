@@ -52,16 +52,25 @@ public sealed class DnsRecordService(CloudflareApiService cloudflareApi, Livefee
 
         foreach (var record in dirtyRecords)
         {
-            if (string.IsNullOrWhiteSpace(record.Id))
-            {
-                await cloudflareApi.CreateRecordAsync(zoneId, record, cancellationToken);
-            }
-            else
-            {
-                await cloudflareApi.UpdateRecordAsync(zoneId, record, cancellationToken);
-            }
+            var sent = record.Clone();
+            var saved = string.IsNullOrWhiteSpace(sent.Id)
+                ? await cloudflareApi.CreateRecordAsync(zoneId, sent, cancellationToken)
+                : await cloudflareApi.UpdateRecordAsync(zoneId, sent, cancellationToken);
 
-            record.IsDirty = false;
+            var unchanged = record.Type == sent.Type && record.Name == sent.Name
+                && record.Content == sent.Content && record.Ttl == sent.Ttl
+                && record.Priority == sent.Priority && record.Proxied == sent.Proxied;
+            record.Id = saved.Id;
+            if (unchanged)
+            {
+                record.Type = saved.Type;
+                record.Name = saved.Name;
+                record.Content = saved.Content;
+                record.Ttl = saved.Ttl;
+                record.Priority = saved.Priority;
+                record.Proxied = saved.Proxied;
+            }
+            record.IsDirty = !unchanged;
         }
 
         livefeed.Success($"DNS Records gespeichert. Änderungen: {dirtyRecords.Count}");

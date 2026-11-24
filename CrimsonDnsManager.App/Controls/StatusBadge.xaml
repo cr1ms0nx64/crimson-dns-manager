@@ -4,9 +4,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Border x:Name="BadgeBorder"
-            CornerRadius="999"
+            CornerRadius="11"
             BorderThickness="1"
-            MinHeight="18"
+            MinHeight="22"
             Padding="8,3"
             HorizontalAlignment="Left"
             VerticalAlignment="Center">

@@ -106,6 +106,8 @@
                 </StackPanel>
             </Grid>
 
+            <TextBlock x:Name="ValidationError" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFFF7F88" Margin="0,10,0,0" />
+
             <Border x:Name="DirtyBanner"
                     Visibility="Collapsed"
                     CornerRadius="10"

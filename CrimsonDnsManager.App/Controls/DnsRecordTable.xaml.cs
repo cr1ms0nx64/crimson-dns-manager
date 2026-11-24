@@ -290,8 +290,14 @@ public sealed partial class DnsRecordTable : UserControl
             return;
         }
 
-        RecordsList.Visibility = HasRecords ? Visibility.Visible : Visibility.Collapsed;
-        EmptyState.Visibility = HasRecords ? Visibility.Collapsed : Visibility.Visible;
+        var hasVisibleRecords = EnumerateRecords().Any();
+        RecordsList.Visibility = hasVisibleRecords ? Visibility.Visible : Visibility.Collapsed;
+        EmptyState.Visibility = hasVisibleRecords ? Visibility.Collapsed : Visibility.Visible;
+        EmptyTitle.Text = HasRecords ? "Keine passenden Records" : "Keine DNS Records geladen";
+        EmptyDescription.Text = HasRecords
+            ? "Ändere den Suchbegriff oder wähle einen anderen Typfilter."
+            : "Wähle eine Zone und lade die Records über den Schnellzugriff oder die Zonenliste.";
+        EmptyLoadButton.Visibility = HasRecords ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void HeaderCheckBox_Checked(object sender, RoutedEventArgs e)

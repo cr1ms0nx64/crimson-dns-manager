@@ -25,5 +25,5 @@ public sealed partial class ShellViewModel : ObservableObject
     public UpdateViewModel Update { get; }
 
     [ObservableProperty]
-    private string versionText = "DNS MANAGER 0.1.0";
+    private string versionText = typeof(ShellViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.1";
 }

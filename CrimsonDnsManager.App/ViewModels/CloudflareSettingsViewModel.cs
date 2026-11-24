@@ -101,7 +101,9 @@ public sealed partial class CloudflareSettingsViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task SaveAsync()
+    private async Task SaveAsync() => await SaveSettingsAsync();
+
+    private async Task<bool> SaveSettingsAsync()
     {
         IsSaving = true;
         try
@@ -118,10 +120,12 @@ public sealed partial class CloudflareSettingsViewModel : ObservableObject
             };
 
             await _settingsService.SaveAsync(settings, ApiToken);
+            return true;
         }
         catch (Exception ex)
         {
             _livefeed.Error($"Einstellungen konnten nicht gespeichert werden: {ex.Message}");
+            return false;
         }
         finally
         {
@@ -138,7 +142,7 @@ public sealed partial class CloudflareSettingsViewModel : ObservableObject
         IsTestingConnection = true;
         try
         {
-            await SaveAsync();
+            if (!await SaveSettingsAsync()) return;
             await _cloudflareApi.TestConnectionAsync();
         }
         catch (Exception ex)
@@ -154,36 +158,42 @@ public sealed partial class CloudflareSettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadZonesAsync()
     {
-        IsLoadingZones = true;
         _cts?.Cancel();
-        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var request = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _cts = request;
+        IsLoadingZones = true;
 
         try
         {
-            await SaveAsync();
-            var zones = await _cloudflareApi.GetZonesAsync(Domain, _cts.Token);
+            if (!await SaveSettingsAsync()) return;
+            var zones = await _cloudflareApi.GetZonesAsync(Domain, request.Token);
+            if (!ReferenceEquals(_cts, request) || request.IsCancellationRequested) return;
+            var selectedId = SelectedZone?.Id ?? ZoneId;
             Zones.Clear();
 
             foreach (var zone in zones)
             {
-                zone.IsActive = zone.Id == ZoneId || zone.Id == SelectedZone?.Id;
+                zone.IsActive = zone.Id == selectedId;
                 Zones.Add(zone);
             }
 
-            if (Zones.Count > 0 && SelectedZone is null)
-            {
-                SelectZone(Zones[0]);
-            }
-
-            await _settingsService.StoreZonesAsync(Zones, SelectedZone?.Id, _cts.Token);
+            var selection = Zones.FirstOrDefault(x => x.Id == selectedId) ?? Zones.FirstOrDefault();
+            SelectedZone = null;
+            if (selection is not null) SelectZone(selection);
+            await _settingsService.StoreZonesAsync(Zones.ToList(), SelectedZone?.Id, request.Token);
+        }
+        catch (OperationCanceledException) when (request.IsCancellationRequested)
+        {
+            if (ReferenceEquals(_cts, request)) _livefeed.Warning("Zonen laden abgebrochen oder Zeitlimit erreicht.");
         }
         catch (Exception ex)
         {
+            if (!ReferenceEquals(_cts, request)) return;
             _livefeed.Error($"Zonen konnten nicht geladen werden: {ex.Message}");
         }
         finally
         {
-            IsLoadingZones = false;
+            if (ReferenceEquals(_cts, request)) { _cts = null; IsLoadingZones = false; }
         }
     }
 

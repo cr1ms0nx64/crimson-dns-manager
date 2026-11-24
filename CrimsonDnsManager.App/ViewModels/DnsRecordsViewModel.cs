@@ -14,6 +14,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     private readonly LivefeedService _livefeed;
     private readonly CloudflareSettingsViewModel _settings;
     private CancellationTokenSource? _cts;
+    private CloudflareZone? _pendingZone;
 
     public DnsRecordsViewModel(
         DnsRecordService dnsRecordService,
@@ -84,11 +85,32 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     public string LoadedBadgeText => HasRecords ? $"{Records.Count} Records geladen" : "Keine Records";
     public string LoadedBadgeVariant => HasRecords ? "ok" : "gray";
 
+    partial void OnIsSavingChanged(bool value)
+    {
+        if (!value && _pendingZone is { } zone)
+        {
+            _pendingZone = null;
+            _ = SetActiveZoneAsync(zone);
+        }
+    }
+
     partial void OnFilterTypeChanged(string value) => ApplyFilter();
     partial void OnSearchQueryChanged(string value) => ApplyFilter();
 
     public async Task SetActiveZoneAsync(CloudflareZone zone)
     {
+        if (IsSaving) { _pendingZone = zone; return; }
+        if (ActiveZone?.Id != zone.Id)
+        {
+            DetachRecords();
+            Records.Clear();
+            ApplyFilter();
+            NotifyCounts();
+            NotifySelection();
+            CloseEditRecord();
+            IsAddRecordOpen = false;
+            IsDeleteModalOpen = false;
+        }
         ActiveZone = zone;
         OnPropertyChanged(nameof(ActiveZoneName));
         OnPropertyChanged(nameof(PageKicker));
@@ -105,13 +127,17 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
             return;
         }
 
-        IsLoading = true;
+        if (IsSaving) return;
         _cts?.Cancel();
-        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var request = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _cts = request;
+        IsLoading = true;
 
         try
         {
-            var records = await _dnsRecordService.LoadRecordsAsync(zoneId, _cts.Token);
+            var records = await _dnsRecordService.LoadRecordsAsync(zoneId, request.Token);
+            if (!ReferenceEquals(_cts, request) || request.IsCancellationRequested) return;
+            DetachRecords();
             Records.Clear();
             foreach (var record in records.OrderBy(x => x.Type).ThenBy(x => x.Name))
             {
@@ -121,20 +147,27 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
 
             ApplyFilter();
             NotifyCounts();
+            NotifySelection();
+        }
+        catch (OperationCanceledException) when (request.IsCancellationRequested)
+        {
+            if (ReferenceEquals(_cts, request)) _livefeed.Warning("Laden der DNS Records abgebrochen oder Zeitlimit erreicht.");
         }
         catch (Exception ex)
         {
+            if (!ReferenceEquals(_cts, request)) return;
             _livefeed.Error($"DNS Records konnten nicht geladen werden: {ex.Message}");
         }
         finally
         {
-            IsLoading = false;
+            if (ReferenceEquals(_cts, request)) { _cts = null; IsLoading = false; }
         }
     }
 
     [RelayCommand]
     private void OpenAddRecord()
     {
+        if (IsSaving || IsLoading) return;
         DraftRecord = new DnsRecord
         {
             Type = "A",
@@ -152,6 +185,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateRecordAsync()
     {
+        if (IsSaving || IsLoading) return;
         var zoneId = ActiveZone?.Id ?? _settings.ZoneId;
         if (string.IsNullOrWhiteSpace(zoneId))
         {
@@ -159,9 +193,10 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
             return;
         }
 
+        IsSaving = true;
         try
         {
-            var created = await _dnsRecordService.CreateAsync(zoneId, DraftRecord);
+            var created = await _dnsRecordService.CreateAsync(zoneId, DraftRecord.Clone());
             created.PropertyChanged += OnRecordPropertyChanged;
             Records.Add(created);
             IsAddRecordOpen = false;
@@ -172,6 +207,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
         {
             _livefeed.Error($"Record konnte nicht erstellt werden: {ex.Message}");
         }
+        finally { IsSaving = false; }
     }
 
     [RelayCommand]
@@ -188,6 +224,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     [RelayCommand]
     private void OpenEditRecord(DnsRecord? record)
     {
+        if (IsSaving || IsLoading) return;
         if (record is null)
         {
             return;
@@ -207,6 +244,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveEditedRecordAsync(DnsRecord? edited)
     {
+        if (IsSaving || IsLoading) return;
         var zoneId = ActiveZone?.Id ?? _settings.ZoneId;
         if (string.IsNullOrWhiteSpace(zoneId))
         {
@@ -219,13 +257,13 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
             return;
         }
 
+        var target = EditingRecord;
         IsSaving = true;
         try
         {
-            var original = EditingRecord.Clone();
+            var original = target.Clone();
             var saved = await _dnsRecordService.PatchAsync(zoneId, original, edited);
-            ApplyRecordSnapshot(EditingRecord, saved);
-            EditingRecord.IsDirty = false;
+            ApplyRecordSnapshot(target, saved);
             IsEditRecordOpen = false;
             EditingRecord = null;
             ApplyFilter();
@@ -244,6 +282,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveDnsAsync()
     {
+        if (IsSaving || IsLoading) return;
         var zoneId = ActiveZone?.Id ?? _settings.ZoneId;
         if (string.IsNullOrWhiteSpace(zoneId))
         {
@@ -325,6 +364,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
     [RelayCommand]
     private async Task ConfirmDeleteAsync()
     {
+        if (IsSaving || IsLoading) return;
         var zoneId = ActiveZone?.Id ?? _settings.ZoneId;
         if (string.IsNullOrWhiteSpace(zoneId))
         {
@@ -338,6 +378,7 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
             return;
         }
 
+        IsSaving = true;
         try
         {
             foreach (var record in selected)
@@ -348,13 +389,17 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
             }
 
             IsDeleteModalOpen = false;
-            ApplyFilter();
-            NotifyCounts();
-            NotifySelection();
         }
         catch (Exception ex)
         {
             _livefeed.Error($"Records konnten nicht gelöscht werden: {ex.Message}");
+        }
+        finally
+        {
+            ApplyFilter();
+            NotifyCounts();
+            NotifySelection();
+            IsSaving = false;
         }
     }
 
@@ -399,10 +444,18 @@ public sealed partial class DnsRecordsViewModel : ObservableObject
             return;
         }
 
-        if (sender is DnsRecord record && e.PropertyName is not nameof(DnsRecord.IsDirty))
+        if (sender is DnsRecord record && e.PropertyName is nameof(DnsRecord.Type) or nameof(DnsRecord.Name)
+            or nameof(DnsRecord.Content) or nameof(DnsRecord.Ttl) or nameof(DnsRecord.Priority) or nameof(DnsRecord.Proxied))
         {
             record.IsDirty = true;
+            ApplyFilter();
+            NotifyCounts();
         }
+    }
+
+    private void DetachRecords()
+    {
+        foreach (var record in Records) record.PropertyChanged -= OnRecordPropertyChanged;
     }
 
     private void NotifyCounts()

@@ -134,17 +134,17 @@
                     VerticalAlignment="Center"
                     Width="420">
                 <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="Keine DNS Records geladen"
+                    <TextBlock x:Name="EmptyTitle" Text="Keine DNS Records geladen"
                                FontFamily="{StaticResource SoraSemiBoldFont}"
                                FontSize="16"
                                Foreground="{StaticResource TextBrush}"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="Wähle eine Zone und lade die Records über den Schnellzugriff oder die Zonenliste."
+                    <TextBlock x:Name="EmptyDescription" Text="Wähle eine Zone und lade die Records über den Schnellzugriff oder die Zonenliste."
                                FontSize="12"
                                TextWrapping="Wrap"
                                Foreground="{StaticResource MutedBrush}"
                                TextAlignment="Center" />
-                    <Button Content="DNS Records laden"
+                    <Button x:Name="EmptyLoadButton" Content="DNS Records laden"
                             Style="{StaticResource CrimsonPrimaryButtonStyle}"
                             Click="LoadRecords_Click"
                             HorizontalAlignment="Center" />
