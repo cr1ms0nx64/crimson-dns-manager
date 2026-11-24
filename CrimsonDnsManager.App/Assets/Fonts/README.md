@@ -1,14 +1,8 @@
-Place local font files here before shipping:
+# Schriftarten
 
-Sora:
-Sora-Regular.ttf
-Sora-Medium.ttf
-Sora-SemiBold.ttf
-Sora-Bold.ttf
+Die TTF-Dateien sind im Repository enthalten und werden lokal geladen.
 
-IBM Plex Mono:
-IBMPlexMono-Regular.ttf
-IBMPlexMono-Medium.ttf
-IBMPlexMono-SemiBold.ttf
-
-The XAML resources already reference these local paths. The font files are intentionally not bundled in this archive.
+| Schrift | Herkunft | Lizenz |
+| --- | --- | --- |
+| Sora | [Sora bei Google Fonts](https://github.com/google/fonts/tree/main/ofl/sora) | [SIL OFL 1.1](Sora-OFL.txt) |
+| IBM Plex Mono | [IBM Plex Mono bei Google Fonts](https://github.com/google/fonts/tree/main/ofl/ibmplexmono) | [SIL OFL 1.1](IBMPlexMono-OFL.txt) |

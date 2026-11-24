@@ -1,5 +1,6 @@
 using CrimsonDnsManager.App.Models;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 namespace CrimsonDnsManager.App.Services;
 
@@ -44,8 +45,12 @@ public sealed class LivefeedService
             return string.Empty;
         }
 
-        return message
-            .Replace("Authorization", "Auth", StringComparison.OrdinalIgnoreCase)
-            .Replace("Bearer ", "Bearer ***", StringComparison.OrdinalIgnoreCase);
+        var safe = Regex.Replace(message, @"\bAuthorization\s*:\s*[^\r\n]+",
+            "Authorization: [redacted]", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
+        safe = Regex.Replace(safe, @"\b(Bearer|Basic)\s+[A-Za-z0-9+/_=.\-]+",
+            "$1 [redacted]", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
+        return Regex.Replace(safe,
+            "(\\b(?:api[-_ ]?token|token|api[-_ ]?key|password|secret|x-auth-key)\\b\\s*[:=]\\s*)(?:\"[^\"]*\"|'[^']*'|[^\\s,;]+)",
+            "$1[redacted]", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
     }
 }

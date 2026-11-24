@@ -35,3 +35,15 @@ _ParkedComplexXaml_*/
 Thumbs.db
 desktop.ini
 
+# Credentials, local data and obsolete source copies
+.env
+.env.*
+secrets.dat
+*.db
+*.db-shm
+*.db-wal
+*.sqlite*
+*.bak
+*.bak2
+*.bak-*
+
